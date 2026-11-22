@@ -53,11 +53,13 @@ class MikaAccessibilityService : AccessibilityService() {
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
 
     suspend fun snapshot(): Snapshot? = withContext(Dispatchers.Main.immediate) {
+        val before = generation.get()
         val root = rootInActiveWindow ?: return@withContext null
         val pkg = root.packageName?.toString().orEmpty()
         val seen = ArrayList<Node>()
         try { collect(root, emptyList(), seen, 0) } finally { root.recycle() }
-        Snapshot(pkg, generation.get(), seen)
+        // Never label a mixed/changed tree as fresh: actions only accept an unchanged generation.
+        if (generation.get() != before) null else Snapshot(pkg, before, seen)
     }
 
     private fun collect(node: AccessibilityNodeInfo, path: List<Int>, out: MutableList<Node>, depth: Int) {

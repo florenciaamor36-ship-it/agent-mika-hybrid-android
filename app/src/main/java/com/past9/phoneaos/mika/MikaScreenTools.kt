@@ -24,7 +24,7 @@ private fun accessPolicy(context: Context, pkg: String): Triple<ScreenBlocklist,
     val reason = if (list.isExplicitlyAllowedWallet(pkg)) "$label is opted in as read-only; this controller cannot operate it." else ScreenBlocklist.reason(label)
     return Triple(list, label, reason)
 }
-private fun currentSnapshot(context: Context): Pair<MikaAccessibilityService, MikaAccessibilityService.Snapshot>? {
+private suspend fun currentSnapshot(context: Context): Pair<MikaAccessibilityService, MikaAccessibilityService.Snapshot>? {
     val service = MikaAccessibilityService.current() ?: return null
     val snapshot = service.snapshot() ?: return null
     return service to snapshot
@@ -117,4 +117,43 @@ class MikaScreenTypeTool(private val context: Context) : Tool {
     }
 }
 
-fun mikaScreenTools(context: Context): List<Tool> = listOf(MikaScreenReadTool(context), MikaScreenOpenTool(context), MikaScreenTapTool(context), MikaScreenTypeTool(context))
+
+class MikaScreenSwipeTool(private val context: Context) : Tool {
+    override val spec = ToolSpec("mika_screen_swipe",
+        "Swipe on the current visible app screen using coordinates from a fresh mika_screen_read. Read again after every swipe. Finance apps and read-only wallets are blocked from interaction.",
+        schema(listOf("generation", "x1", "y1", "x2", "y2"), "generation" to int("Generation from latest screen read"), "x1" to int("Start x"), "y1" to int("Start y"), "x2" to int("End x"), "y2" to int("End y")))
+    override suspend fun run(input: JSONObject, ctx: ToolContext): String {
+        if (!MikaAccessibilityService.enabled(context)) return "Mika-style screen control is off; nothing was swiped."
+        val (svc, shot) = currentSnapshot(context) ?: return "Accessibility service is not connected; nothing was swiped."
+        if (shot.generation != input.optLong("generation", -1)) return "The screen changed since the last read. Nothing was swiped; read it again."
+        val (policy, label, reason) = accessPolicy(context, shot.packageName)
+        if (!MikaScreenPolicy.mayAct(policy, shot.packageName, label)) return reason
+        val x1=input.optInt("x1", -1); val y1=input.optInt("y1", -1); val x2=input.optInt("x2", -1); val y2=input.optInt("y2", -1)
+        if (listOf(x1,y1,x2,y2).any { it < 0 }) return "Swipe coordinates must be non-negative."
+        val under = shot.nodes.filter { x1 in it.bounds.left until it.bounds.right && y1 in it.bounds.top until it.bounds.bottom }
+            .minByOrNull { it.bounds.width().toLong() * it.bounds.height() }
+        if (under != null) {
+            val el = nodeElement(under)
+            when (val gate = ScreenRules.beforePress(label, ScreenRules.Rule.ASK, el, under.text.ifBlank { under.hint }, emptyList())) {
+                is ScreenRules.Gate.Refuse -> return gate.reason
+                is ScreenRules.Gate.Ask -> if (ctx.ask("APPROVAL|${gate.what}|${gate.details}", listOf("Approve", "Decline")) != "Approve") return "Not done; the swipe was not approved."
+                ScreenRules.Gate.Go -> Unit
+            }
+        }
+        if (!svc.swipe(x1,y1,x2,y2,shot.generation)) return "The screen changed or Android refused the swipe. Read the screen again."
+        return "Swiped the visible screen. Read it again before the next step."
+    }
+}
+
+class MikaScreenBackTool(private val context: Context) : Tool {
+    override val spec = ToolSpec("mika_screen_back", "Press Android Back on the current visible screen. Finance apps and read-only wallets are blocked from interaction.", schema())
+    override suspend fun run(input: JSONObject, ctx: ToolContext): String {
+        if (!MikaAccessibilityService.enabled(context)) return "Mika-style screen control is off; nothing was done."
+        val (svc, shot) = currentSnapshot(context) ?: return "Accessibility service is not connected; nothing was done."
+        val (policy,label,reason)=accessPolicy(context,shot.packageName)
+        if (!MikaScreenPolicy.mayAct(policy,shot.packageName,label)) return reason
+        return if (svc.pressBack()) "Pressed Android Back on the visible screen. Read it again." else "Android refused Back. Nothing else was done."
+    }
+}
+
+fun mikaScreenTools(context: Context): List<Tool> = listOf(MikaScreenReadTool(context), MikaScreenOpenTool(context), MikaScreenTapTool(context), MikaScreenTypeTool(context), MikaScreenSwipeTool(context), MikaScreenBackTool(context))

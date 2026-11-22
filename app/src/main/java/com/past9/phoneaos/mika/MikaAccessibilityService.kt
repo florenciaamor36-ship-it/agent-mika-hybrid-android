@@ -8,8 +8,12 @@ import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.graphics.Rect
+import android.graphics.Path
 import android.os.Bundle
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.resume
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** A small, opt-in accessibility bridge inspired by Mika. It stores no event text or screenshots. */
 class MikaAccessibilityService : AccessibilityService() {
@@ -48,12 +52,12 @@ class MikaAccessibilityService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean { if (instance === this) instance = null; return super.onUnbind(intent) }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
 
-    fun snapshot(): Snapshot? {
-        val root = rootInActiveWindow ?: return null
+    suspend fun snapshot(): Snapshot? = withContext(Dispatchers.Main.immediate) {
+        val root = rootInActiveWindow ?: return@withContext null
         val pkg = root.packageName?.toString().orEmpty()
         val seen = ArrayList<Node>()
         try { collect(root, emptyList(), seen, 0) } finally { root.recycle() }
-        return Snapshot(pkg, generation.get(), seen)
+        Snapshot(pkg, generation.get(), seen)
     }
 
     private fun collect(node: AccessibilityNodeInfo, path: List<Int>, out: MutableList<Node>, depth: Int) {
@@ -75,27 +79,52 @@ class MikaAccessibilityService : AccessibilityService() {
         }
     }
 
-    fun click(path: List<Int>, expectedGeneration: Long): Boolean = onFreshNode(path, expectedGeneration) { node ->
+    suspend fun click(path: List<Int>, expectedGeneration: Long): Boolean = withContext(Dispatchers.Main.immediate) { onFreshNode(path, expectedGeneration) { node ->
         if (!node.isEnabled || node.isPassword) false else {
-            var target: AccessibilityNodeInfo? = node
-            var owned = false
-            while (target != null && !target.isClickable) {
+            if (node.isClickable) return@onFreshNode node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+            var target = node.parent
+            while (target != null) {
+                if (target.isClickable) {
+                    val ok = target.isEnabled && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    target.recycle()
+                    return@onFreshNode ok
+                }
                 val parent = target.parent
-                if (owned) target.recycle()
-                target = parent; owned = target != null
+                target.recycle()
+                target = parent
             }
-            val ok = target?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
-            if (owned) target?.recycle()
-            ok
+            false
         }
-    }
+    } }
 
-    fun type(path: List<Int>, expectedGeneration: Long, value: String): Boolean = onFreshNode(path, expectedGeneration) { node ->
+    suspend fun type(path: List<Int>, expectedGeneration: Long, value: String): Boolean = withContext(Dispatchers.Main.immediate) { onFreshNode(path, expectedGeneration) { node ->
         if (!node.isEnabled || !node.isEditable || node.isPassword) false else {
             val args = Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }
             node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
         }
+    } }
+
+    suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, expectedGeneration: Long): Boolean {
+        return withContext(Dispatchers.Main.immediate) {
+        if (generation.get() != expectedGeneration || x1 < 0 || y1 < 0 || x2 < 0 || y2 < 0) return@withContext false
+        val dm = resources.displayMetrics
+        if (x1 >= dm.widthPixels || x2 >= dm.widthPixels || y1 >= dm.heightPixels || y2 >= dm.heightPixels) return@withContext false
+        val path = Path().apply { moveTo(x1.toFloat(), y1.toFloat()); lineTo(x2.toFloat(), y2.toFloat()) }
+        val gesture = android.accessibilityservice.GestureDescription.Builder()
+            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 350))
+            .build()
+        kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            if (generation.get() != expectedGeneration) { cont.resume(false); return@suspendCancellableCoroutine }
+            val accepted = dispatchGesture(gesture, object : GestureResultCallback() {
+                override fun onCompleted(description: android.accessibilityservice.GestureDescription) { if (cont.isActive) cont.resume(true) }
+                override fun onCancelled(description: android.accessibilityservice.GestureDescription) { if (cont.isActive) cont.resume(false) }
+            }, null)
+            if (!accepted && cont.isActive) cont.resume(false)
+        }
+        }
     }
+
+    suspend fun pressBack(): Boolean = withContext(Dispatchers.Main.immediate) { performGlobalAction(GLOBAL_ACTION_BACK) }
 
     private inline fun onFreshNode(path: List<Int>, expectedGeneration: Long, action: (AccessibilityNodeInfo) -> Boolean): Boolean {
         if (generation.get() != expectedGeneration) return false

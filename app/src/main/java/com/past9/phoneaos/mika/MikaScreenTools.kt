@@ -86,7 +86,7 @@ class MikaScreenTapTool(private val context: Context) : Tool {
         if (!MikaScreenPolicy.mayAct(policy, shot.packageName, label)) return reason
         if (!node.enabled || node.password) return "That control is disabled or sensitive; nothing was tapped."
         val element = nodeElement(node)
-        val gate = ScreenRules.beforePress(shot.packageName, ScreenRules.Rule.ASK, element, node.text.ifBlank { node.hint }, emptyList())
+        val gate = ScreenRules.beforePress(label, ScreenRules.Rule.ASK, element, node.text.ifBlank { node.hint }, emptyList(), MikaScreenPolicy.RISKY_WORDS)
         if (gate is ScreenRules.Gate.Refuse) return gate.reason
         if (gate is ScreenRules.Gate.Ask) {
             val answer = ctx.ask("APPROVAL|${gate.what}|${gate.details}", listOf("Approve", "Decline"))
@@ -132,9 +132,12 @@ class MikaScreenSwipeTool(private val context: Context) : Tool {
         if (listOf(x1,y1,x2,y2).any { it < 0 }) return "Swipe coordinates must be non-negative."
         val under = shot.nodes.filter { x1 in it.bounds.left until it.bounds.right && y1 in it.bounds.top until it.bounds.bottom }
             .minByOrNull { it.bounds.width().toLong() * it.bounds.height() }
-        if (under != null) {
-            val el = nodeElement(under)
-            when (val gate = ScreenRules.beforePress(label, ScreenRules.Rule.ASK, el, under.text.ifBlank { under.hint }, emptyList())) {
+        // A swipe can trigger a destructive/payment control. Ask if it starts on one OR if this screen exposes any risky action.
+        val risky = under?.takeIf { ScreenRules.riskyWord(it.text.ifBlank { it.hint }, it.resourceId, MikaScreenPolicy.RISKY_WORDS) != null }
+            ?: shot.nodes.firstOrNull { ScreenRules.riskyWord(it.text.ifBlank { it.hint }, it.resourceId, MikaScreenPolicy.RISKY_WORDS) != null }
+        if (risky != null) {
+            val el = nodeElement(risky)
+            when (val gate = ScreenRules.beforePress(label, ScreenRules.Rule.ASK, el, risky.text.ifBlank { risky.hint }, emptyList(), MikaScreenPolicy.RISKY_WORDS)) {
                 is ScreenRules.Gate.Refuse -> return gate.reason
                 is ScreenRules.Gate.Ask -> if (ctx.ask("APPROVAL|${gate.what}|${gate.details}", listOf("Approve", "Decline")) != "Approve") return "Not done; the swipe was not approved."
                 ScreenRules.Gate.Go -> Unit

@@ -281,6 +281,13 @@ class MikaScreenPolicyTest {
         assertTrue(MikaScreenPolicy.mayAct(block, "com.whatsapp", "WhatsApp"))
     }
 
+    @Test fun spanishPaymentAndTransferLabelsRequireApproval() {
+        val p = ScreenElement(1, "Button", "Pagar ahora", "", "", "", 0, 0, 200, 100, "c", 0)
+        val t = ScreenElement(2, "Button", "Transferir", "", "", "", 0, 0, 200, 100, "c", 0)
+        assertTrue(ScreenRules.beforePress("Tienda", ScreenRules.Rule.ASK, p, p.text, emptyList(), MikaScreenPolicy.RISKY_WORDS) is ScreenRules.Gate.Ask)
+        assertTrue(ScreenRules.beforePress("Tienda", ScreenRules.Rule.ASK, t, t.text, emptyList(), MikaScreenPolicy.RISKY_WORDS) is ScreenRules.Gate.Ask)
+    }
+
     @Test fun aPersonAddedBlockOverridesWalletOptIn() {
         val block = ScreenBlocklist(screenBuiltIn(), listOf("air.PrexArgentina"), listOf("air.PrexArgentina"))
         assertFalse(MikaScreenPolicy.mayRead(block, "air.PrexArgentina", "Prex Argentina"))

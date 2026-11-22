@@ -397,7 +397,6 @@ private fun SetupHost(onDismiss: () -> Unit) {
         onWhileLocked = { on -> settings.setExtra(Screens.LOCKED, if (on) "1" else "0"); info = info.copy(whileLocked = on) },
         onWalletAccess = { id, on ->
             Screens.setWalletEnabled(context, id, on)
-            if (session.state.value.open) session.userStop()
             info = when (id) { "prex" -> info.copy(prexReadOnly = on); "binance" -> info.copy(binanceReadOnly = on); else -> info }
             scope.launch { runCatching { session.close() } }
         },

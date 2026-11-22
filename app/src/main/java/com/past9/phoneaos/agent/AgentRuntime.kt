@@ -455,7 +455,11 @@ class AgentRuntime(
         list += com.past9.phoneaos.automation.MacroDroidRunTool(context, settings.macroSettings)
         list += com.past9.phoneaos.media.MediaTools.tools(context)
         // The background screen is off until the person switches it on (Settings > Background screen): no tools before that.
-        if (com.past9.phoneaos.screen.Screens.on(context)) list += com.past9.phoneaos.tools.screenTools(context) + com.past9.phoneaos.tools.screenSkillTools(context)
+        if (com.past9.phoneaos.screen.Screens.on(context)) {
+            list += com.past9.phoneaos.tools.screenTools(context) + com.past9.phoneaos.tools.screenSkillTools(context)
+            // The Mika-inspired visible-screen bridge exists only after the person enables Android's accessibility service.
+            if (com.past9.phoneaos.mika.MikaAccessibilityService.enabled(context)) list += com.past9.phoneaos.mika.mikaScreenTools(context)
+        }
         list += SkillFindTool(db.memory()); list += SkillSaveTool(db.memory())
         list += com.past9.phoneaos.cards.CardGuideTool(context)
         list += com.past9.phoneaos.cards.CardSaveTool(context, cards, settings, db.chat()) { c -> com.past9.phoneaos.cards.CardScripts.schedule(context, c, onRoutineChanged, onRoutineDeleted) }

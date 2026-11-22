@@ -383,4 +383,9 @@
     <string name="screen_wallet_read_only">Solo lectura; el agente no puede operar</string>
     <string name="screen_wallet_prex">Prex Argentina</string>
     <string name="screen_wallet_binance">Binance</string>
+    <string name="screen_mika_title">Control de pantalla visible estilo Mika</string>
+    <string name="screen_mika_body">Opcional. Android te pide habilitar Accesibilidad manualmente. Al activarlo, el agente puede leer y controlar la app visible; las acciones sensibles requieren tu aprobación. Las apps financieras siguen bloqueadas y las billeteras habilitadas quedan solo lectura. Podés revocar el permiso desde los ajustes de Android.</string>
+    <string name="screen_mika_button">Permiso de Accesibilidad: apagado hasta que lo habilites</string>
+    <string name="screen_mika_enabled">Permiso de Accesibilidad habilitado en este teléfono</string>
+    <string name="mika_accessibility_description">Control opcional de la pantalla visible por el agente, solo si habilitás este servicio en los ajustes de Accesibilidad de Android. El agente lee la pantalla cuando se lo pedís, no guarda eventos, bloquea apps financieras y pide aprobación para acciones sensibles.</string>
 </resources>

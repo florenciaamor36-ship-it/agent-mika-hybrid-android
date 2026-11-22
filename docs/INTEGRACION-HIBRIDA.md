@@ -6,13 +6,13 @@ Este repositorio es un fork público del proyecto Android [Agent](https://github
 
 Agent ya incluye un controlador de apps por «pantalla de fondo»: el modelo puede abrir una app en una pantalla aislada, leer los controles, tocar, escribir, deslizar y volver a leer. Las herramientas `screen_open_app`, `screen_look`, `screen_tap`, `screen_type`, `screen_swipe` y otras se registran en `AgentRuntime` **solo si la persona activa la función**. El interruptor está apagado por defecto. La implementación concentra las reglas de seguridad en `ScreenSession`.
 
-La idea de operar apps en el teléfono está también en [Mika](https://github.com/wangzan101/Mika), licencia Apache-2.0. No copiamos código de Mika a este fork: el controlador equivalente ya existe en Agent, y mezclar dos motores de pantalla distintos agregaría riesgo y complejidad sin una función demostrada. Si una prueba revela una carencia concreta, se evaluará incorporar solo el componente necesario y conservar su `LICENSE` y `NOTICE`.
+El modo de control de pantalla visible toma como referencia la experiencia de [Mika](https://github.com/wangzan101/Mika), licencia Apache-2.0. Se añadió un servicio independiente de Accesibilidad escrito para este fork; no se copió código de Mika. La persona debe habilitarlo manualmente en los ajustes de Android; solo entonces se exponen las herramientas `mika_screen_read`, `mika_screen_open_app`, `mika_screen_tap` y `mika_screen_type`. El modo lee la pantalla activa bajo demanda, oculta el texto de campos de contraseña, no almacena eventos ni capturas, mantiene bloqueados los bancos y las billeteras no habilitadas, deja las billeteras opt-in solo lectura, descarta IDs viejos cuando cambia la pantalla y pide aprobación antes de botones sensibles. La pantalla aislada de Agent sigue como segundo modo independiente; ninguno se activa solo.
 
 ## Requisitos conocidos / pendientes de comprobar
 
 - El módulo de pantalla de fondo requiere Android 11 o posterior; la app base declara Android 9 como mínimo.
 - El helper de pantalla necesita permiso de shell: iniciar Shizuku y autorizar Agent, o ejecutar el comando ADB que muestra el asistente de configuración. Agent documenta la ruta **Settings → Background screen** y presenta los pasos cuando hacen falta.
-- El ZTE Blade A55 concreto de Daniel no fue probado. Android 14 sería compatible por versión, pero faltan la configuración de Shizuku/ADB y la comprobación de que el fabricante permite la pantalla secundaria.
+- El ZTE Blade A55 concreto de Daniel no fue probado. Android 14 sería compatible por versión, pero faltan la configuración de Shizuku/ADB para el modo aislado y la comprobación del servicio de Accesibilidad sobre la pantalla visible en ese teléfono.
 
 ## Límites y controles que se conservan
 
@@ -26,6 +26,6 @@ La idea de operar apps en el teléfono está también en [Mika](https://github.c
 ## Validación
 
 - Una compilación/CI no verifica la función en el teléfono.
-- La CI enfocada anterior pasó las pruebas de bloqueo financiero, aprobación y detención. El cambio de acceso opcional de billeteras requiere una corrida nueva que compruebe su opt-in exacto y que la sesión sea realmente de solo lectura.
-- Después Daniel tendrá que confirmar la instalación y el setup en el Blade A55 antes de afirmar compatibilidad real.
+- La CI enfocada pasó las pruebas de bloqueo financiero, aprobación, detención y consulta de Prex y Binance en modo de solo lectura. La ejecución valida el código y pruebas con teléfono simulado; no verifica interacción real con aplicaciones de billetera.
+- El servicio nuevo de Accesibilidad para el modo visible y las herramientas ya están en la rama y compilan junto con la app; sus permisos y acciones de UI todavía requieren pruebas dedicadas y luego confirmación de Daniel en el Blade A55. No se ha probado el servicio en un teléfono real.
 - Esta rama es de desarrollo; `main` conserva la base upstream sin cambios propios hasta revisar y aprobar el trabajo.

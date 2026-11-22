@@ -153,12 +153,13 @@ data class ScreenSetupInfo(
     val adbCommand: String = "", val reason: String = "", val busy: Boolean = false, val note: String = "",
     val rules: String = "", val words: String = "", val whileLocked: Boolean = false,
     val prexReadOnly: Boolean = false, val binanceReadOnly: Boolean = false,
+    val mikaAccessibilityEnabled: Boolean = false,
 )
 
 class ScreenSetupActions(
     val onGetShizuku: () -> Unit = {}, val onOpenShizuku: () -> Unit = {}, val onAllowShizuku: () -> Unit = {}, val onStart: () -> Unit = {},
     val onTry: () -> Unit = {}, val onRules: (String) -> Unit = {}, val onWords: (String) -> Unit = {}, val onWhileLocked: (Boolean) -> Unit = {},
-    val onWalletAccess: (String, Boolean) -> Unit = { _, _ -> }, val onBlocked: () -> Unit = {},
+    val onWalletAccess: (String, Boolean) -> Unit = { _, _ -> }, val onOpenMikaAccessibility: () -> Unit = {}, val onBlocked: () -> Unit = {},
 )
 
 @Composable
@@ -283,6 +284,17 @@ fun ScreenSetupSheet(info: ScreenSetupInfo, actions: ScreenSetupActions, onDismi
                 SheetField(words, { words = it; actions.onWords(it) }, stringResource(R.string.screen_words_label), stringResource(R.string.screen_words_hint), singleLine = true,
                     keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None))
                 Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
+                Text(stringResource(R.string.screen_mika_title), style = com.past9.phoneaos.ui.theme.Eyebrow, color = cs.primary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+                Text(stringResource(R.string.screen_mika_body), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 12.dp))
+                AppCard(padding = PaddingValues(vertical = 4.dp)) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Accessibility, null, tint = cs.primary)
+                        Spacer(Modifier.width(16.dp))
+                        Text(if (info.mikaAccessibilityEnabled) stringResource(R.string.screen_mika_enabled) else stringResource(R.string.screen_mika_button), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        OutlinedButton(onClick = actions.onOpenMikaAccessibility) { Text(stringResource(R.string.ui_open), style = MaterialTheme.typography.labelLarge) }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.screen_wallet_title), style = com.past9.phoneaos.ui.theme.Eyebrow, color = cs.primary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
                 Text(stringResource(R.string.screen_wallet_body), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 12.dp))
@@ -365,14 +377,16 @@ private fun SetupHost(onDismiss: () -> Unit) {
     var info by remember {
         mutableStateOf(ScreenSetupInfo(tooOld = android.os.Build.VERSION.SDK_INT < 30, adbCommand = ScreenStarter.adbCommand(context),
             rules = settings.extra(Screens.RULES).orEmpty(), words = settings.extra(Screens.WORDS).orEmpty(), whileLocked = settings.extra(Screens.LOCKED) == "1",
-            prexReadOnly = Screens.walletEnabled(context, "prex"), binanceReadOnly = Screens.walletEnabled(context, "binance")))
+            prexReadOnly = Screens.walletEnabled(context, "prex"), binanceReadOnly = Screens.walletEnabled(context, "binance"),
+            mikaAccessibilityEnabled = com.past9.phoneaos.mika.MikaAccessibilityService.enabled(context)))
     }
     // The steps tick themselves: look at the phone again every second while the sheet is open.
     LaunchedEffect(Unit) {
         val link = Screens.preview(context)
         while (true) {
             val ready = runCatching { link.call(op("ping"), 2_000).json.optInt("version") == com.past9.phoneaos.screen.ScreenProtocol.VERSION }.getOrDefault(false)
-            info = info.copy(ready = ready, shizukuInstalled = ScreenStarter.shizukuInstalled(context), shizukuRunning = ScreenStarter.shizukuRunning(), shizukuAllowed = ScreenStarter.shizukuGranted())
+            info = info.copy(ready = ready, shizukuInstalled = ScreenStarter.shizukuInstalled(context), shizukuRunning = ScreenStarter.shizukuRunning(), shizukuAllowed = ScreenStarter.shizukuGranted(),
+                mikaAccessibilityEnabled = com.past9.phoneaos.mika.MikaAccessibilityService.enabled(context))
             delay(1_000)
         }
     }
@@ -400,6 +414,7 @@ private fun SetupHost(onDismiss: () -> Unit) {
             info = when (id) { "prex" -> info.copy(prexReadOnly = on); "binance" -> info.copy(binanceReadOnly = on); else -> info }
             scope.launch { runCatching { session.close() } }
         },
+        onOpenMikaAccessibility = { runCatching { com.past9.phoneaos.mika.MikaAccessibilityService.openSettings(context) } },
         onBlocked = { ScreenUi.show.value = ScreenUi.BLOCKED },
     ), onDismiss)
 }

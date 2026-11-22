@@ -28,6 +28,7 @@ jobs:
         run: >-
           ./gradlew --no-daemon :app:testDebugUnitTest
           --tests com.past9.phoneaos.ScreenBlocklistTest
+          --tests com.past9.phoneaos.MikaScreenPolicyTest
           --tests com.past9.phoneaos.ScreenSessionTest.aBankingAppIsRefusedOnEveryWayIn
           --tests com.past9.phoneaos.ScreenSessionTest.aSendAsksFirstAndADeclineOrNoAnswerSendsNothing
           --tests com.past9.phoneaos.ScreenSessionTest.submittingTypedTextAndPressingABareSpotAskToo

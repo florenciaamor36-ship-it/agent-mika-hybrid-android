@@ -366,4 +366,9 @@
     <string name="screen_wallet_read_only">Read-only; actions disabled for the agent</string>
     <string name="screen_wallet_prex">Prex Argentina</string>
     <string name="screen_wallet_binance">Binance</string>
+    <string name="screen_mika_title">Mika-style visible-screen control</string>
+    <string name="screen_mika_body">Optional. Android asks you to enable Accessibility access yourself. When enabled, the agent can read and control the visible app screen; sensitive actions need your approval. Finance apps are blocked and opted-in wallets stay read-only. Turn the service off in Android settings to revoke access.</string>
+    <string name="screen_mika_button">Accessibility permission — off until you enable it</string>
+    <string name="screen_mika_enabled">Accessibility permission enabled on this phone</string>
+    <string name="mika_accessibility_description">Optional agent control of the visible screen, only after you enable this service in Android Accessibility settings. The agent reads the screen when asked, does not store accessibility events, blocks finance apps, and asks before sensitive actions.</string>
 </resources>

@@ -2,6 +2,7 @@ package com.past9.phoneaos
 
 import androidx.test.core.app.ApplicationProvider
 import com.past9.phoneaos.agent.ToolContext
+import com.past9.phoneaos.mika.MikaScreenPolicy
 import com.past9.phoneaos.connections.LearnedApp
 import com.past9.phoneaos.connections.LearnedStore
 import com.past9.phoneaos.connections.PageRunner
@@ -263,6 +264,27 @@ class ScreenBlocklistTest {
         assertNotNull(list.moneyScreen(listOf("Hello", "Available balance R 1 200.00")))
         assertNotNull(list.moneyScreen(listOf("Enter your PIN")))
         assertNull(list.moneyScreen(listOf("Chats", "Updates", "Calls")))
+    }
+}
+
+@RunWith(RobolectricTestRunner::class)
+class MikaScreenPolicyTest {
+    @Test fun onlyExactOptedInWalletsAreReadableAndNeverOperable() {
+        val block = ScreenBlocklist(screenBuiltIn(), explicitlyAllowedWallets = listOf("air.PrexArgentina", "com.binance.dev", "com.binance.*"))
+        assertTrue(MikaScreenPolicy.mayRead(block, "air.PrexArgentina", "Prex Argentina"))
+        assertFalse(MikaScreenPolicy.mayAct(block, "air.PrexArgentina", "Prex Argentina"))
+        assertTrue(MikaScreenPolicy.mayRead(block, "com.binance.dev", "Binance"))
+        assertFalse(MikaScreenPolicy.mayAct(block, "com.binance.dev", "Binance"))
+        assertFalse(MikaScreenPolicy.mayRead(block, "com.binance.us", "Binance"))
+        assertFalse(MikaScreenPolicy.mayRead(block, "com.mybank.app", "My Bank"))
+        assertTrue(MikaScreenPolicy.mayRead(block, "com.whatsapp", "WhatsApp"))
+        assertTrue(MikaScreenPolicy.mayAct(block, "com.whatsapp", "WhatsApp"))
+    }
+
+    @Test fun aPersonAddedBlockOverridesWalletOptIn() {
+        val block = ScreenBlocklist(screenBuiltIn(), listOf("air.PrexArgentina"), listOf("air.PrexArgentina"))
+        assertFalse(MikaScreenPolicy.mayRead(block, "air.PrexArgentina", "Prex Argentina"))
+        assertFalse(MikaScreenPolicy.mayAct(block, "air.PrexArgentina", "Prex Argentina"))
     }
 }
 

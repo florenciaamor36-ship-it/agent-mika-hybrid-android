@@ -258,7 +258,7 @@ object HelperMain {
         when (op) {
             "create" -> {
                 val w = q.optInt("w", 720); val h = q.optInt("h", 1600); val dpi = q.optInt("dpi", 320)
-                q.optJSONArray("block")?.let { a -> blocklist = ScreenBlocklist(builtIn, (0 until a.length()).map { a.getString(it) }) }
+                q.optJSONArray("block")?.let { a -> blocklist = ScreenBlocklist(builtIn, (0 until a.length()).map { a.getString(it) }, q.optJSONArray("wallets")?.let { w -> (0 until w.length()).map { w.getString(it) } }.orEmpty()) }
                 display?.let { if (it.width == w && it.height == h) return describe(ScreenProtocol.ok()) else release(emptySet()) }
                 runCatching { removeOrphans() }
                 val d = onMain { HiddenDisplay.create(DISPLAY_NAME, w, h, dpi, q.optBoolean("locked", false)) }
@@ -270,7 +270,7 @@ object HelperMain {
             "block" -> {
                 // The app's own additions. They can only add: the built-in list is read from the app's file, never from here.
                 val a = q.optJSONArray("add") ?: JSONArray()
-                blocklist = ScreenBlocklist(builtIn, (0 until a.length()).map { a.getString(it) })
+                blocklist = ScreenBlocklist(builtIn, (0 until a.length()).map { a.getString(it) }, q.optJSONArray("wallets")?.let { w -> (0 until w.length()).map { w.getString(it) } }.orEmpty())
                 sweep()
                 return ScreenProtocol.ok().put("rules", blocklist.rules)
             }
@@ -341,10 +341,11 @@ object HelperMain {
                 if (blank) {
                     val nodes = t.optJSONArray("nodes") ?: JSONArray()
                     val words = (0 until nodes.length()).map { nodes.getJSONObject(it).let { n -> n.optString("t") + " " + n.optString("d") } }
-                    if (blocklist.moneyScreen(words) != null) {
-                        val front = Tasks.all().firstOrNull { it.displayId == d.id && it.visible }
+                    val front = Tasks.all().firstOrNull { it.displayId == d.id && it.visible }
+                    val pkg = front?.top?.packageName.orEmpty()
+                    if (blocklist.moneyScreen(words) != null && !blocklist.isExplicitlyAllowedWallet(pkg)) {
                         front?.let { Tasks.remove(it.taskId) }
-                        return blockedReply(front?.top?.packageName ?: "a protected money screen")
+                        return blockedReply(pkg.ifBlank { "a protected money screen" })
                     }
                 }
                 return t

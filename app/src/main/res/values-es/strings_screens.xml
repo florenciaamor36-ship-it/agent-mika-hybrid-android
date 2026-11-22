@@ -378,4 +378,9 @@
     </plurals>
     <string name="memory_exported_sub">Un solo archivo zip. Importar memorias recupera todas las páginas.</string>
     <string name="memory_failed">No ha funcionado</string>
+    <string name="screen_wallet_title">Acceso opcional a billeteras (solo lectura)</string>
+    <string name="screen_wallet_body">Desactivado de forma predeterminada. Al activarlo, el agente puede abrir y consultar únicamente esa app instalada. No puede tocar, escribir, deslizar, compartir, pagar ni transferir. Para operar, tomá el control y hacelo vos.</string>
+    <string name="screen_wallet_read_only">Solo lectura; el agente no puede operar</string>
+    <string name="screen_wallet_prex">Prex Argentina</string>
+    <string name="screen_wallet_binance">Binance</string>
 </resources>

@@ -152,12 +152,13 @@ data class ScreenSetupInfo(
     val shizukuInstalled: Boolean = false, val shizukuRunning: Boolean = false, val shizukuAllowed: Boolean = false,
     val adbCommand: String = "", val reason: String = "", val busy: Boolean = false, val note: String = "",
     val rules: String = "", val words: String = "", val whileLocked: Boolean = false,
+    val prexReadOnly: Boolean = false, val binanceReadOnly: Boolean = false,
 )
 
 class ScreenSetupActions(
     val onGetShizuku: () -> Unit = {}, val onOpenShizuku: () -> Unit = {}, val onAllowShizuku: () -> Unit = {}, val onStart: () -> Unit = {},
     val onTry: () -> Unit = {}, val onRules: (String) -> Unit = {}, val onWords: (String) -> Unit = {}, val onWhileLocked: (Boolean) -> Unit = {},
-    val onBlocked: () -> Unit = {},
+    val onWalletAccess: (String, Boolean) -> Unit = { _, _ -> }, val onBlocked: () -> Unit = {},
 )
 
 @Composable
@@ -282,6 +283,14 @@ fun ScreenSetupSheet(info: ScreenSetupInfo, actions: ScreenSetupActions, onDismi
                 SheetField(words, { words = it; actions.onWords(it) }, stringResource(R.string.screen_words_label), stringResource(R.string.screen_words_hint), singleLine = true,
                     keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None))
                 Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.screen_wallet_title), style = com.past9.phoneaos.ui.theme.Eyebrow, color = cs.primary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+                Text(stringResource(R.string.screen_wallet_body), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, modifier = Modifier.padding(horizontal = 4.dp).padding(bottom = 12.dp))
+                AppCard(padding = PaddingValues(vertical = 4.dp)) {
+                    SwitchRow(Icons.Rounded.AccountBalanceWallet, stringResource(R.string.screen_wallet_prex), stringResource(R.string.screen_wallet_read_only), info.prexReadOnly, { actions.onWalletAccess("prex", it) })
+                    SwitchRow(Icons.Rounded.CurrencyBitcoin, stringResource(R.string.screen_wallet_binance), stringResource(R.string.screen_wallet_read_only), info.binanceReadOnly, { actions.onWalletAccess("binance", it) })
+                }
+                Spacer(Modifier.height(12.dp))
                 AppCard(padding = PaddingValues(vertical = 4.dp)) {
                     SwitchRow(Icons.Rounded.Lock, stringResource(R.string.screen_locked), if (info.whileLocked) stringResource(R.string.screen_locked_on) else stringResource(R.string.screen_locked_off),
                         info.whileLocked, actions.onWhileLocked)
@@ -355,7 +364,8 @@ private fun SetupHost(onDismiss: () -> Unit) {
     val reason by ScreenUi.reason.collectAsStateWithLifecycle()
     var info by remember {
         mutableStateOf(ScreenSetupInfo(tooOld = android.os.Build.VERSION.SDK_INT < 30, adbCommand = ScreenStarter.adbCommand(context),
-            rules = settings.extra(Screens.RULES).orEmpty(), words = settings.extra(Screens.WORDS).orEmpty(), whileLocked = settings.extra(Screens.LOCKED) == "1"))
+            rules = settings.extra(Screens.RULES).orEmpty(), words = settings.extra(Screens.WORDS).orEmpty(), whileLocked = settings.extra(Screens.LOCKED) == "1",
+            prexReadOnly = Screens.walletEnabled(context, "prex"), binanceReadOnly = Screens.walletEnabled(context, "binance")))
     }
     // The steps tick themselves: look at the phone again every second while the sheet is open.
     LaunchedEffect(Unit) {
@@ -385,6 +395,12 @@ private fun SetupHost(onDismiss: () -> Unit) {
         },
         onRules = { settings.setExtra(Screens.RULES, it) }, onWords = { settings.setExtra(Screens.WORDS, it) },
         onWhileLocked = { on -> settings.setExtra(Screens.LOCKED, if (on) "1" else "0"); info = info.copy(whileLocked = on) },
+        onWalletAccess = { id, on ->
+            Screens.setWalletEnabled(context, id, on)
+            if (session.state.value.open) session.userStop()
+            info = when (id) { "prex" -> info.copy(prexReadOnly = on); "binance" -> info.copy(binanceReadOnly = on); else -> info }
+            scope.launch { runCatching { session.close() } }
+        },
         onBlocked = { ScreenUi.show.value = ScreenUi.BLOCKED },
     ), onDismiss)
 }

@@ -69,6 +69,20 @@ object Screens {
     /** Apps the person added to the blocked list: one package (or pattern) per line, with the app's name after a bar. */
     const val BLOCKED = "screen_blocked"
     const val RECORD = "screen_record"
+    const val WALLET_ACCESS = "screen_wallet_read_access"
+    /** Official Google Play package IDs; access is opt-in, exact-package-only, and read-only. */
+    val SUPPORTED_WALLETS = linkedMapOf("prex" to "air.PrexArgentina", "binance" to "com.binance.dev")
+    fun walletEnabled(context: Context, id: String): Boolean = SUPPORTED_WALLETS[id]?.let { it in walletAccess(context) } ?: false
+    fun walletAccess(context: Context): List<String> {
+        val selected = App.graph(context).settings.extra(WALLET_ACCESS).orEmpty().lines().map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        return SUPPORTED_WALLETS.values.filter { it in selected }
+    }
+    fun setWalletEnabled(context: Context, id: String, enabled: Boolean) {
+        val pkg = SUPPORTED_WALLETS[id] ?: return
+        val selected = walletAccess(context).toMutableSet()
+        if (enabled) selected += pkg else selected -= pkg
+        App.graph(context).settings.setExtra(WALLET_ACCESS, selected.joinToString("\n"))
+    }
     /** The whole feature's switch. Off by default: with it off there are no screen tools, no service and no setup prompts. */
     const val ON = "screen_on"
 
@@ -159,8 +173,9 @@ object Screens {
         val w = minOf(720, realW) / 2 * 2
         val h = (realH.toLong() * w / realW).toInt() / 2 * 2
         val added = blockAdded(context)
+        val wallets = walletAccess(context)
         return ScreenConfig(ScreenRules.parse(s.extra(RULES)), ScreenRules.extraWords(s.extra(WORDS)), s.extra(LOCKED) == "1", w, h, (m.densityDpi.toLong() * w / realW).toInt().coerceIn(120, 640),
-            ScreenBlocklist(builtInBlocklist(context), added), added, s.extra(RECORD) != "0")
+            ScreenBlocklist(builtInBlocklist(context), added, wallets), added, s.extra(RECORD) != "0")
     }
 
     fun session(context: Context): ScreenSession = made ?: synchronized(this) {

@@ -17,12 +17,15 @@ La idea de operar apps en el teléfono está también en [Mika](https://github.c
 ## Límites y controles que se conservan
 
 - La pantalla de fondo se activa manualmente y queda apagada por defecto. No cambiamos esa decisión ni solicitamos permisos al instalar.
-- Las apps de bancos/dinero están bloqueadas por el módulo; enviar, pagar, publicar o borrar requiere aprobación de la persona. La persona puede detener la tarea o tomar el control.
+- Bancos, billeteras, pagos y cripto quedan bloqueados por defecto. Hay una excepción manual, apagada por defecto y limitada a los paquetes oficiales exactos de Prex Argentina (`air.PrexArgentina`) y Binance (`com.binance.dev`): la pantalla de fondo solo puede abrirlas y leerlas. El agente no puede tocar, escribir, deslizar, usar teclas ni compartir contenido en esas billeteras. Para interactuar, Daniel toma el control manualmente; ninguna operación financiera se automatiza.
+- En las demás apps, enviar, pagar, publicar o borrar sigue pidiendo aprobación de la persona. Esta excepción no cambia el bloqueo de las otras apps financieras, no desinstala nada y no habilita actividad financiera fuera de la pantalla aislada.
+- La persona puede detener la tarea o tomar el control en cualquier momento.
 - Si una app se abre en la pantalla que está usando la persona, el controlador se niega a manipularla y procura devolver el foco.
 - No almacenar claves en GitHub ni generar subidas de APK como parte de la CI.
 
 ## Validación
 
 - Una compilación/CI no verifica la función en el teléfono.
-- Próximo paso: correr pruebas unitarias en CI sin guardar APKs; después Daniel tendrá que confirmar la instalación y el setup en el Blade A55 antes de afirmar compatibilidad real.
+- La CI enfocada anterior pasó las pruebas de bloqueo financiero, aprobación y detención. El cambio de acceso opcional de billeteras requiere una corrida nueva que compruebe su opt-in exacto y que la sesión sea realmente de solo lectura.
+- Después Daniel tendrá que confirmar la instalación y el setup en el Blade A55 antes de afirmar compatibilidad real.
 - Esta rama es de desarrollo; `main` conserva la base upstream sin cambios propios hasta revisar y aprobar el trabajo.

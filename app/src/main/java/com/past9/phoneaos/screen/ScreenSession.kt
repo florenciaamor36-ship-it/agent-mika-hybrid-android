@@ -31,7 +31,7 @@ data class ScreenConfig(
     /** May it keep working while the phone is locked. Off unless the person switches it on. */
     val whileLocked: Boolean = false,
     val width: Int = 720, val height: Int = 1600, val dpi: Int = 320,
-    /** Banking and money apps: built in, plus what the person added. Never used on the background screen. */
+    /** Built-in finance blocklist with only manually opted-in exact wallet packages exempted for read-only access. */
     val blocklist: ScreenBlocklist = ScreenBlocklist(""), val blockAdded: List<String> = emptyList(),
     /** Keep a watchable recording of each run. */
     val record: Boolean = true,
@@ -267,6 +267,10 @@ class ScreenSession(
     /** Banking and money apps: refused here before the helper is even asked, and again by the helper itself. */
     private fun money(pkg: String, label: String = apps.label(pkg)): String? = if (config().blocklist.blocked(pkg, label) != null) ScreenBlocklist.reason(label.ifBlank { pkg }) else null
 
+    private fun readOnlyWallet(pkg: String): Boolean = config().blocklist.isExplicitlyAllowedWallet(pkg)
+    private fun walletReadOnlyReason(pkg: String): String =
+        "${apps.label(pkg)} is enabled in read-only mode: the agent can inspect its screen, but cannot tap, type, swipe, press keys, share content, or make payments/transfers there. Take over the screen and do the interaction yourself."
+
     private suspend fun approve(ctx: ToolContext, gate: ScreenRules.Gate): String? = when (gate) {
         ScreenRules.Gate.Go -> null
         is ScreenRules.Gate.Refuse -> gate.reason
@@ -290,10 +294,11 @@ class ScreenSession(
 
     private suspend fun doOpen(ctx: ToolContext, ref: AppRef, link: String, fresh: Boolean, by: String = "agent", quick: Boolean = false, files: List<String>? = null, words: String = ""): String? {
         money(ref.pkg, ref.label)?.let { note("blocked", "Blocked: ${ref.label}"); return it }
+        if (readOnlyWallet(ref.pkg) && (link.isNotBlank() || files != null)) return walletReadOnlyReason(ref.pkg)
         if (rule(ref.pkg) == ScreenRules.Rule.NEVER) return ScreenRules.NEVER_REASON
         helper()?.let { return it }
         val c = config()
-        val made = ask(op("create").put("w", c.width).put("h", c.height).put("dpi", c.dpi).put("locked", c.whileLocked).put("block", JSONArray(c.blockAdded)))
+        val made = ask(op("create").put("w", c.width).put("h", c.height).put("dpi", c.dpi).put("locked", c.whileLocked).put("block", JSONArray(c.blockAdded)).put("wallets", JSONArray(c.blocklist.explicitlyAllowedWallets)))
         if (!made.optBoolean("ok")) return "The phone refused a background screen: ${err(made, "no reason given")}. Nothing was opened."
         displayId = made.optInt("display")
         // Most apps have one window. If it is on the person's own screen, taking it would pull it out from under them.
@@ -339,6 +344,8 @@ class ScreenSession(
     /** Press [target], or the point. Null when done; otherwise why not. [quick]: a replay, which does not wait for the screen to settle. */
     private suspend fun doPress(ctx: ToolContext, target: ScreenElement?, x: Int, y: Int, long: Boolean, by: String = "agent", quick: Boolean = false, generic: Boolean = false): String? {
         val s = _state.value
+        val pkgForSafety = front()?.pkg ?: s.pkg
+        if (readOnlyWallet(pkgForSafety)) return walletReadOnlyReason(pkgForSafety)
         val px = target?.centerX ?: x; val py = target?.centerY ?: y
         if (px !in 0 until s.width.coerceAtLeast(1) || py !in 0 until s.height.coerceAtLeast(1)) return "That point is off the screen (${s.width}x${s.height})."
         val before = elements
@@ -369,6 +376,7 @@ class ScreenSession(
         val s = _state.value
         val pkg = front()?.pkg ?: s.pkg
         money(pkg)?.let { return it to "" }
+        if (readOnlyWallet(pkg)) return walletReadOnlyReason(pkg) to ""
         if (rule(pkg) == ScreenRules.Rule.NEVER) return ScreenRules.NEVER_REASON to ""
         val t0 = now()
         val before = elements
@@ -421,6 +429,7 @@ class ScreenSession(
         val s = _state.value
         val pkg = front()?.pkg ?: s.pkg
         money(pkg)?.let { return it }
+        if (readOnlyWallet(pkg)) return walletReadOnlyReason(pkg)
         if (rule(pkg) == ScreenRules.Rule.NEVER) return ScreenRules.NEVER_REASON
         val typed = elements.filter { it.editable && it.text.isNotBlank() && 'p' !in it.flags }.map { it.text }
         if (code == 66 && typed.isNotEmpty()) approve(ctx, ScreenRules.beforePress(apps.label(pkg), rule(pkg), null, "", typed, config().extraWords, submit = true))?.let { return it }
@@ -435,6 +444,8 @@ class ScreenSession(
 
     private suspend fun doSwipe(ctx: ToolContext, direction: String, box: ScreenElement?, x1: Int?, y1: Int?, x2: Int?, y2: Int?, by: String = "agent", quick: Boolean = false): String? {
         val s = _state.value
+        val walletPkg = front()?.pkg ?: s.pkg
+        if (readOnlyWallet(walletPkg)) return walletReadOnlyReason(walletPkg)
         val l = box?.left ?: 0; val t = box?.top ?: 0; val r = box?.right ?: s.width; val b = box?.bottom ?: s.height
         val cx = (l + r) / 2; val cy = (t + b) / 2; val dx = (r - l) * 3 / 10; val dy = (b - t) * 3 / 10
         // "up" moves the finger up, which shows what is further down the page.
@@ -595,6 +606,7 @@ class ScreenSession(
     suspend fun share(ctx: ToolContext, app: String, files: List<String>, words: String, owner: String = ""): String = mutex.withLock { safely {
         blocked(ctx, needOpen = false)?.let { return it }
         val ref = apps.find(app) ?: return "No app called \"$app\" is installed. Use android_apps to see what is installed and what each accepts."
+        if (readOnlyWallet(ref.pkg)) return walletReadOnlyReason(ref.pkg)
         val who = owner.trim().take(40).ifBlank { ctx.agentLabel }
         val cur = _state.value
         if (cur.open && cur.owner.isNotBlank() && cur.owner != who && cur.owner != "you" && now() - lastUsed < BUSY_MS)
@@ -823,7 +835,7 @@ class ScreenSession(
         val f = handed ?: run { _state.value = _state.value.copy(takenOver = false, step = ""); return "" }
         money(f.pkg)?.let { return it }
         val c = config()
-        val made = runCatching { ask(op("create").put("w", c.width).put("h", c.height).put("dpi", c.dpi).put("locked", c.whileLocked).put("block", JSONArray(c.blockAdded))) }.getOrNull()
+        val made = runCatching { ask(op("create").put("w", c.width).put("h", c.height).put("dpi", c.dpi).put("locked", c.whileLocked).put("block", JSONArray(c.blockAdded)).put("wallets", JSONArray(c.blocklist.explicitlyAllowedWallets))) }.getOrNull()
             ?: return "The background screen is not running."
         displayId = made.optInt("display")
         val task = runCatching { tasks().firstOrNull { it.optString("pkg") == f.pkg && it.optInt("display") == 0 }?.optInt("id") }.getOrNull()

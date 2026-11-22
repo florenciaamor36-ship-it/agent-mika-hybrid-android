@@ -361,4 +361,9 @@
     </plurals>
     <string name="memory_exported_sub">One zip file. Import memories brings every page back.</string>
     <string name="memory_failed">That didn\'t work</string>
+    <string name="screen_wallet_title">Optional wallet access (read-only)</string>
+    <string name="screen_wallet_body">Off by default. When enabled, the agent can open and inspect only that exact installed app. It cannot tap, type, swipe, share, pay or transfer there. To interact, take over and do it yourself.</string>
+    <string name="screen_wallet_read_only">Read-only; actions disabled for the agent</string>
+    <string name="screen_wallet_prex">Prex Argentina</string>
+    <string name="screen_wallet_binance">Binance</string>
 </resources>

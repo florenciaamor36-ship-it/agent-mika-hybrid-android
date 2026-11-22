@@ -1,22 +1,30 @@
 package com.past9.phoneaos.screen
 
 /**
- * Apps the background screen never opens, shows or touches: banking, wallets, payments, cards, crypto, investing.
+ * Banking, wallets, payments, cards, crypto and investing are blocked by default.
  *
- * The built-in rules come from assets/screen-blocklist.txt and cannot be switched off by anyone. The person can add
- * more apps; nothing can take one away, and the agent has no way to change the list. The helper (the part that owns
- * the hidden display) enforces it itself, below every tool: it refuses to start or move a blocked app, and closes one
- * at once if it lands on the hidden display some other way.
+ * The only exception is an exact package in the curated, person-controlled wallet opt-in. Such apps are opened
+ * read-only: the agent may inspect their screen but cannot press, type, swipe, key or share. The helper (which owns
+ * the hidden display) enforces the same package list below every tool. All other built-in finance rules stay active.
  *
  * Plain logic, no Android: the same matcher runs in the app, in the helper and in the unit tests.
  */
-class ScreenBlocklist(builtIn: String, added: Collection<String> = emptyList()) {
+class ScreenBlocklist(
+    builtIn: String,
+    added: Collection<String> = emptyList(),
+    explicitlyAllowedWallets: Collection<String> = emptyList(),
+) {
+    /** Exact packages only; the app exposes only its two curated wallet IDs behind a manual opt-in. */
+    val explicitlyAllowedWallets: Set<String> = explicitlyAllowedWallets.map { it.trim().lowercase() }
+        .filter { it.matches(Regex("[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)+")) }.toSet()
     private val exact = HashSet<String>()
     private val patterns = ArrayList<Pair<String, Regex>>()
     private val words = ArrayList<String>()
     private val edges = ArrayList<String>()
     private val labels = ArrayList<Pair<String, Regex>>()
     private val screens = ArrayList<String>()
+    private val personAddedPackages = added.map { it.substringBefore('|').trim().lowercase() }
+        .filter { it.matches(Regex("[a-z0-9_.*]+(\\.[a-z0-9_.*]+)*")) && it.replace("*", "").replace(".", "").length >= 3 }
     /** Lines that could not be read, for the test that checks the file. */
     val problems = ArrayList<String>()
     var rules = 0; private set
@@ -45,6 +53,9 @@ class ScreenBlocklist(builtIn: String, added: Collection<String> = emptyList()) 
         }
         rules++
     }
+
+    /** Whether this exact installed package was explicitly opted in as one of the supported wallets. */
+    fun isExplicitlyAllowedWallet(pkg: String): Boolean = pkg.trim().lowercase() in explicitlyAllowedWallets
 
     /** Why [pkg] is blocked (the rule that caught it), or null when it is not. [label] is the app's name on the phone, when known. */
     fun blocked(pkg: String, label: String = ""): String? {

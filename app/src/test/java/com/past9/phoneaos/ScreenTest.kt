@@ -53,7 +53,7 @@ private const val BANK = "capitec.acuity.mobile.prod"
  * A phone that is not there: it answers the way the screen helper does, for one small made-up app ("Notes": a list, a
  * New note button, a title field, Save and Send) and enforces the money-app rule the way the helper does.
  */
-private class ScreenFakePhone(private val blocklist: ScreenBlocklist) : ScreenBackend {
+private class ScreenFakePhone(var blocklist: ScreenBlocklist) : ScreenBackend {
     var alive = true
     var version = ScreenProtocol.VERSION
     var display = 0
@@ -196,7 +196,7 @@ private class ScreenCtx(override val agentLabel: String = "main", var answer: St
 }
 
 private class ScreenFakeApps : ScreenApps {
-    val all = listOf(AppRef(NOTES, "Notes", "$NOTES/.Main"), AppRef(BANK, "Capitec", "$BANK/.Main"), AppRef("com.example.games", "Pocket Wallet", "com.example.games/.Main"), AppRef("org.other.chat", "Chatter", "org.other.chat/.Main"))
+    val all = listOf(AppRef(NOTES, "Notes", "$NOTES/.Main"), AppRef(BANK, "Capitec", "$BANK/.Main"), AppRef("com.example.games", "Pocket Wallet", "com.example.games/.Main"), AppRef("org.other.chat", "Chatter", "org.other.chat/.Main"), AppRef("air.PrexArgentina", "Prex Argentina", "air.PrexArgentina/.Main"), AppRef("com.binance.dev", "Binance", "com.binance.dev/.Main"))
     override fun find(nameOrPackage: String) = all.firstOrNull { it.pkg == nameOrPackage || it.label.equals(nameOrPackage, true) }
     override fun label(pkg: String) = all.firstOrNull { it.pkg == pkg }?.label ?: pkg
     override fun near(q: String) = emptyList<String>()
@@ -216,8 +216,21 @@ class ScreenBlocklistTest {
             "za.co.discovery.bank", "za.co.africanbank.myworld", "za.co.investec.mobile", "com.oldmutual.myom", "com.bankzero.mobile", "com.paypal.android.p2pmobile", "com.transferwise.android",
             "com.revolut.revolut", "com.google.android.apps.walletnfcrel", "com.google.android.apps.nbu.paisa.user", "com.samsung.android.spay", "com.samsung.android.spayfw", "com.fireid.snapscan",
             "com.zapper.android", "co.bitx.android.wallet", "com.valr.app", "com.binance.dev", "za.co.yoco", "com.easyequities.android", "com.coinbase.android", "com.squareup.cash",
-            "com.chase.sig.android", "io.metamask", "com.robinhood.android", "com.somenewbank.app", "com.acme.mywallet", "com.acme.cryptotracker", "com.shop.payments.sdkdemo", "xyz.fastpay", "com.vodacom.vodapay")
+            "com.chase.sig.android", "io.metamask", "com.robinhood.android", "com.somenewbank.app", "com.acme.mywallet", "com.acme.cryptotracker", "com.shop.payments.sdkdemo", "xyz.fastpay", "com.vodacom.vodapay", "air.PrexArgentina")
         blocked.forEach { assertNotNull("should be blocked: $it", list.blocked(it)) }
+    }
+
+    @Test fun onlyAnExactExplicitWalletPackageCanBeOpened() {
+        val optedIn = ScreenBlocklist(screenBuiltIn(), explicitlyAllowedWallets = listOf("air.PrexArgentina", "com.binance.dev", "com.binance.*"))
+        assertTrue(optedIn.isExplicitlyAllowedWallet("air.PrexArgentina"))
+        assertTrue(optedIn.isExplicitlyAllowedWallet("com.binance.dev"))
+        assertFalse("wildcards never grant wallet access", optedIn.isExplicitlyAllowedWallet("com.binance.us"))
+        assertNull(optedIn.blocked("air.PrexArgentina", "Prex Argentina"))
+        assertNull(optedIn.blocked("com.binance.dev", "Binance"))
+        assertNotNull("a similarly named package stays blocked", optedIn.blocked("com.binance.us", "Binance"))
+        assertNotNull("opt-in is off unless the exact package is supplied", list.blocked("air.PrexArgentina", "Prex Argentina"))
+        val userBlocked = ScreenBlocklist(screenBuiltIn(), listOf("air.PrexArgentina"), listOf("air.PrexArgentina"))
+        assertNotNull("a user's own block overrides the opt-in", userBlocked.blocked("air.PrexArgentina", "Prex Argentina"))
     }
 
     @Test fun everydayAppsAreNotBlocked() {
@@ -302,11 +315,12 @@ class ScreenSessionTest {
     private val apps = ScreenFakeApps()
     private var rules = ""
     private var added = emptyList<String>()
+    private var walletAccess = emptyList<String>()
     private var setupShown = ""
     private var active = false
     private val masked = ArrayList<List<IntArray>>()
     private var startable = false
-    private fun config() = ScreenConfig(ScreenRules.parse(rules), emptyList(), false, 720, 1600, 320, ScreenBlocklist(screenBuiltIn(), added), added, true)
+    private fun config() = ScreenConfig(ScreenRules.parse(rules), emptyList(), false, 720, 1600, 320, ScreenBlocklist(screenBuiltIn(), added, walletAccess), added, true)
 
     @Before fun setUp() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
@@ -331,6 +345,21 @@ class ScreenSessionTest {
         assertTrue(out, out.contains("Notes is open on the background screen") && out.contains("\"New note\"") && out.contains("\"Shopping\""))
         assertTrue(session.state.value.open); assertTrue(active)
         assertEquals(listOf("-n", "$NOTES/.Main"), phone.started.single())
+    }
+
+    @Test fun optedInWalletCanBeOpenedAndInspectedButNeverOperatedByTheAgent() = runBlocking {
+        walletAccess = listOf("air.PrexArgentina")
+        phone.blocklist = config().blocklist
+        val ctx = ScreenCtx()
+        val opened = session.open(ctx, "Prex Argentina")
+        assertTrue(opened, opened.contains("Prex Argentina is open on the background screen"))
+        assertTrue(session.look(ctx, "tree", "").contains("New note"))
+        assertTrue(session.tap(ctx, null, "New note", null, null, false).contains("read-only mode"))
+        assertTrue(session.type(ctx, "secret", null, "Title", false, false).contains("read-only mode"))
+        assertTrue(session.swipe(ctx, "up", null, null, null, null, null).contains("read-only mode"))
+        assertTrue(session.key(ctx, "enter").contains("read-only mode"))
+        assertTrue("no app action reached the wallet", phone.pressed.isEmpty())
+        assertTrue("no wallet secret was typed", phone.typed.isEmpty())
     }
 
     @Test fun withoutTheHelperTheToolsSayWhyAndShowTheSetupAndNothingCrashes() = runBlocking {

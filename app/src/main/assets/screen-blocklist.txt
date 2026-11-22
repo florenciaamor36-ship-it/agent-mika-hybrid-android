@@ -1,8 +1,8 @@
-# Background screen: apps the agent may never open, see or touch.
-# Banking, wallets, payments, cards, crypto and investing. Money stays in the person's own hands.
-#
-# The rules in this file are built in: nobody can switch them off, not the person, not the agent.
-# People can only ADD apps (Settings > Background screen > Blocked apps).
+# Background screen: apps blocked by default: banking, wallets, payments, cards, crypto and investing.
+# A separate, explicit, exact-package opt-in permits read-only inspection of official Prex Argentina or Binance only.
+# The agent cannot tap, type, swipe, press keys, share, pay or transfer in an opted-in wallet.
+# Other built-in finance rules remain active and cannot be removed by a user or agent.
+# People can add more blocked apps (Settings > Background screen > Blocked apps).
 #
 # One rule per line:
 #   com.example.app          an exact package
@@ -51,6 +51,7 @@ word:snapscan
 word:zapper
 word:payshap
 word:binance
+word:prex
 word:coinbase
 word:easyequities
 word:luno
@@ -90,6 +91,7 @@ label:payshap
 label:luno
 label:valr
 label:binance
+label:prex
 label:yoco
 label:easyequities
 label:coinbase

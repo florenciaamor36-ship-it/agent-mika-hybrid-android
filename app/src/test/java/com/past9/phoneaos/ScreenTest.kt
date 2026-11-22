@@ -362,6 +362,21 @@ class ScreenSessionTest {
         assertTrue("no wallet secret was typed", phone.typed.isEmpty())
     }
 
+    @Test fun optedInBinanceCanBeOpenedAndReadButNotOperatedByTheAgent() = runBlocking {
+        walletAccess = listOf("com.binance.dev")
+        phone.blocklist = config().blocklist
+        val ctx = ScreenCtx()
+        val opened = session.open(ctx, "Binance")
+        assertTrue(opened, opened.contains("Binance is open on the background screen"))
+        assertTrue(session.look(ctx, "tree", "").contains("New note"))
+        assertTrue(session.tap(ctx, null, "New note", null, null, false).contains("read-only mode"))
+        assertTrue(session.type(ctx, "secret", null, "Title", false, false).contains("read-only mode"))
+        assertTrue(session.swipe(ctx, "up", null, null, null, null, null).contains("read-only mode"))
+        assertTrue(session.key(ctx, "enter").contains("read-only mode"))
+        assertTrue("no app action reached Binance", phone.pressed.isEmpty())
+        assertTrue("no wallet secret was typed", phone.typed.isEmpty())
+    }
+
     @Test fun withoutTheHelperTheToolsSayWhyAndShowTheSetupAndNothingCrashes() = runBlocking {
         phone.alive = false
         for (tool in screenTools { session }.filter { it.spec.name != "screen_close" && it.spec.name != "screen_wait" }) {

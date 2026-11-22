@@ -33,6 +33,7 @@ jobs:
           --tests com.past9.phoneaos.ScreenSessionTest.submittingTypedTextAndPressingABareSpotAskToo
           --tests com.past9.phoneaos.ScreenSessionTest.stopWinsAtOnceAndOnlyThePersonCanLiftIt
           --tests com.past9.phoneaos.ScreenSessionTest.optedInWalletCanBeOpenedAndInspectedButNeverOperatedByTheAgent
+          --tests com.past9.phoneaos.ScreenSessionTest.optedInBinanceCanBeOpenedAndReadButNotOperatedByTheAgent
       - name: Print exact safety-test failures
         if: always()
         run: |

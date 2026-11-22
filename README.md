@@ -1,3 +1,7 @@
+> **Fork experimental de La Clave Argentina — no es una versión lista para instalar.** Esta rama parte del código real de Agent (MIT). La función de control de otras apps por pantalla de fondo ya está en esa base; el trabajo aquí es preparar y validar una variante independiente, con esa función opcional y apagada hasta habilitarla en el teléfono. **No hay una APK de esta rama para descargar**, y las versiones de Releases vinculadas más abajo pertenecen al proyecto original, no a esta variante. La compatibilidad con el ZTE Blade A55 aún no está probada. Ver [estado y requisitos en español](docs/INTEGRACION-HIBRIDA.md).
+
+---
+
 ![Agent finding the cheapest 5 lb bag of bread flour: it checked Walmart and Target on its own, sped up 12x](docs/demo-flour.gif)
 
 # Agent

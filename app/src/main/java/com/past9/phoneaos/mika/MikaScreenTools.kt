@@ -43,7 +43,6 @@ class MikaScreenReadTool(private val context: Context) : Tool {
         val (svc, shot) = currentSnapshot(context) ?: return "Accessibility is enabled but Android has not connected the service. Nothing was read."
         val (policy, label, reason) = accessPolicy(context, shot.packageName)
         if (!MikaScreenPolicy.mayRead(policy, shot.packageName, label)) return reason
-        val label = runCatching { context.packageManager.getApplicationLabel(context.packageManager.getApplicationInfo(shot.packageName, 0)).toString() }.getOrDefault(shot.packageName)
         val lines = shot.nodes.map { n ->
             val kind = when { n.password -> "password field (text hidden)"; n.editable -> "field"; n.clickable -> "button"; n.scrollable -> "list"; else -> "text" }
             val text = if (n.password) "" else n.text.ifBlank { n.hint }

@@ -557,6 +557,8 @@ class ScreenSession(
         blocked(ctx, needOpen = true)?.let { return it }
         helper()?.let { return it }
         if (displayId == 0) return CLOSED
+        val walletPkg = front()?.pkg ?: _state.value.pkg
+        if (readOnlyWallet(walletPkg)) return walletReadOnlyReason(walletPkg)
         val target = when {
             element != null -> elements.firstOrNull { it.id == element } ?: return "There is no element [$element] on the screen as you last saw it. Look again (screen_look)."
             words.isNotBlank() -> ScreenTree.find(elements, words) ?: run { readTree(); ScreenTree.find(elements, words) } ?: return "Nothing on the screen says \"$words\". Closest: ${ScreenFuzzy.closest(elements, words).joinToString { "\"$it\"" }.ifBlank { "nothing" }}. Look again (screen_look), or scroll."
@@ -573,6 +575,8 @@ class ScreenSession(
         blocked(ctx, needOpen = true)?.let { return it }
         helper()?.let { return it }
         if (displayId == 0) return CLOSED
+        val walletPkg = front()?.pkg ?: _state.value.pkg
+        if (readOnlyWallet(walletPkg)) return walletReadOnlyReason(walletPkg)
         val target = when {
             element != null -> elements.firstOrNull { it.id == element } ?: return "There is no element [$element] on the screen as you last saw it. Look again (screen_look)."
             words.isNotBlank() -> ScreenTree.find(elements.filter { it.editable }, words) ?: ScreenTree.find(elements, words) ?: return "No field on the screen says \"$words\". Look again (screen_look)."
@@ -587,6 +591,8 @@ class ScreenSession(
         blocked(ctx, needOpen = true)?.let { return it }
         helper()?.let { return it }
         if (displayId == 0) return CLOSED
+        val walletPkg = front()?.pkg ?: _state.value.pkg
+        if (readOnlyWallet(walletPkg)) return walletReadOnlyReason(walletPkg)
         val box = element?.let { id -> elements.firstOrNull { it.id == id } ?: return "There is no element [$id] on the screen as you last saw it. Look again (screen_look)." }
         doSwipe(ctx, direction, box, x1, y1, x2, y2)?.let { return it }
         "Swiped.\n" + read()
@@ -596,6 +602,8 @@ class ScreenSession(
         blocked(ctx, needOpen = true)?.let { return it }
         helper()?.let { return it }
         if (displayId == 0) return CLOSED
+        val walletPkg = front()?.pkg ?: _state.value.pkg
+        if (readOnlyWallet(walletPkg)) return walletReadOnlyReason(walletPkg)
         doKey(ctx, name)?.let { return it }
         "Pressed ${name.lowercase()}.\n" + read()
     } }

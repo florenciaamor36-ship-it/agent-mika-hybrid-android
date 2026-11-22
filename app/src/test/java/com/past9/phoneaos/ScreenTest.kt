@@ -401,7 +401,7 @@ class ScreenSessionTest {
         ctx.answer = "Decline"
         assertTrue(session.tap(ctx, null, "Send", null, null, false).contains("declined"))
         ctx.answer = null
-        assertTrue(session.tap(ctx, null, "Send", null, null, false).contains("nobody answered"))
+        assertTrue(session.tap(ctx, null, "Send", null, null, false).contains("no answer came in time"))
         assertFalse("Send" in phone.pressed)
         assertTrue(ctx.asked.last(), ctx.asked.last().startsWith("APPROVAL|Press \"Send\" in Notes|") && ctx.asked.last().contains("Hello there"))
         ctx.answer = "Approve"

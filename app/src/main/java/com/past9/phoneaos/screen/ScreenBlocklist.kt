@@ -60,6 +60,10 @@ class ScreenBlocklist(
     /** Why [pkg] is blocked (the rule that caught it), or null when it is not. [label] is the app's name on the phone, when known. */
     fun blocked(pkg: String, label: String = ""): String? {
         val p = pkg.trim().lowercase(); if (p.isEmpty()) return null
+        // A person's own blocked-app setting wins even over an explicit wallet opt-in.
+        personAddedPackages.firstOrNull { rule -> if ('*' in rule) glob(rule).matches(p) else rule == p }?.let { return it }
+        // The opt-in exempts only these exact package IDs from the built-in finance patterns and labels.
+        if (p in explicitlyAllowedWallets) return null
         if (p in exact) return p
         patterns.firstOrNull { it.second.matches(p) }?.let { return it.first }
         val parts = p.split('.', '_')

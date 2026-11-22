@@ -19,7 +19,7 @@ data class ModelInfo(val id: String, val name: String, val vision: Boolean, val 
  */
 object ModelCatalog {
     private val devIds = mapOf(
-        Provider.ANTHROPIC to "anthropic", Provider.OPENAI to "openai", Provider.GEMINI to "google", Provider.DEEPSEEK to "deepseek",
+        Provider.ANTHROPIC to "anthropic", Provider.OPENAI to "openai", Provider.GROQ to "groq", Provider.GEMINI to "google", Provider.DEEPSEEK to "deepseek",
         Provider.OPENROUTER to "openrouter", Provider.OPENCODE_GO to "opencode-go", Provider.OPENCODE_ZEN to "opencode",
     )
     private val notChat = Regex("(?i)embed|tts|whisper|transcri|dall-e|image-gen|imagen|moderation|realtime|audio|veo|aqa|search-preview|babbage|davinci|computer-use")

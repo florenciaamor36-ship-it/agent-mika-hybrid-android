@@ -420,6 +420,10 @@ val keySteps = mapOf(
         R.string.onb_key_openai_2,
         R.string.onb_key_openai_3,
         R.string.onb_key_step_copy_once)),
+    Provider.GROQ to ("https://console.groq.com/keys" to listOf(
+        R.string.onb_key_custom_1,
+        R.string.onb_key_custom_2,
+        R.string.onb_key_custom_3)),
     Provider.GEMINI to ("https://aistudio.google.com/app/apikey" to listOf(
         R.string.onb_key_gemini_1,
         R.string.onb_key_gemini_2,

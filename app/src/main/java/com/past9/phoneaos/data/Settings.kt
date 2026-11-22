@@ -21,6 +21,7 @@ enum class SubKind(val label: String, @androidx.annotation.StringRes val plan: I
 enum class Provider(val label: String, val defaultModel: String, val helperModel: String, val baseUrl: String, val keyHint: String) {
     ANTHROPIC("Anthropic", "claude-sonnet-5-5", "claude-haiku-4-5-20251001", "https://api.anthropic.com/v1", "Paste your key here"),
     OPENAI("OpenAI", "gpt-5", "gpt-5-mini", "https://api.openai.com/v1", "Paste your key here"),
+    GROQ("Groq", "openai/gpt-oss-20b", "openai/gpt-oss-20b", "https://api.groq.com/openai/v1", "Paste your key here"),
     GEMINI("Google Gemini", "gemini-flash-latest", "gemini-flash-lite-latest", "https://generativelanguage.googleapis.com/v1beta/openai", "Paste your key here"),
     DEEPSEEK("DeepSeek", "deepseek-flash", "deepseek-flash", "https://api.deepseek.com/v1", "Paste your key here"),
     OPENCODE_GO("OpenCode Go", "deepseek-v4.1-flash", "deepseek-v4.1-flash", "https://opencode.ai/zen/go/v1", "Paste your key here"),

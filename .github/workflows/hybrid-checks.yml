@@ -35,6 +35,15 @@ jobs:
           --tests com.past9.phoneaos.ScreenSessionTest.stopWinsAtOnceAndOnlyThePersonCanLiftIt
           --tests com.past9.phoneaos.ScreenSessionTest.optedInWalletCanBeOpenedAndInspectedButNeverOperatedByTheAgent
           --tests com.past9.phoneaos.ScreenSessionTest.optedInBinanceCanBeOpenedAndReadButNotOperatedByTheAgent
+          --tests com.past9.phoneaos.ProvidersTest
+      - name: Build debug APK
+        run: ./gradlew --no-daemon :app:assembleDebug
+      - name: Upload personal test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-mika-hybrid-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 5
       - name: Print exact safety-test failures
         if: always()
         run: |

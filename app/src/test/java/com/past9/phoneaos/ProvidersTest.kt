@@ -69,6 +69,14 @@ class ProvidersTest {
         server.shutdown()
     }
 
+    @Test fun groqUsesOpenAiCompatibleProviderAndConfiguredEndpoint() {
+        val provider = AgentRuntime.providerFor(com.past9.phoneaos.data.Provider.GROQ, "test-key")
+        assertTrue(provider is OpenAiCompatProvider)
+        assertEquals("groq", provider.name)
+        assertEquals("https://api.groq.com/openai/v1", com.past9.phoneaos.data.Provider.GROQ.baseUrl)
+        assertEquals("openai/gpt-oss-20b", com.past9.phoneaos.data.Provider.GROQ.defaultModel)
+    }
+
     @Test fun msgJsonRoundTrip() {
         val m = Msg(Role.ASSISTANT, listOf(Block.Text("a"), Block.ToolCall("1", "x", JSONObject().put("k", 1)), Block.ToolResult("1", "r", true)))
         assertEquals(m.toString(), Msg.fromJson(JSONObject(m.toJson().toString())).toString().let { it })

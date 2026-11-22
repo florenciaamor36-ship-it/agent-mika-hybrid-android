@@ -22,7 +22,7 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: ''
-      - name: Install Android API 36 SDK
+      - name: Install Android API 37 SDK
         run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0"
-      - name: Run Android unit tests
-        run: ./gradlew --no-daemon testDebugUnitTest
+      - name: Run Android app unit tests
+        run: ./gradlew --no-daemon :app:testDebugUnitTest

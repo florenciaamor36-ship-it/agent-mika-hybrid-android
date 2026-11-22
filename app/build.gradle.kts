@@ -10,7 +10,11 @@ val releaseSigning: Map<String, String> = file((project.findProperty("signingPro
 
 android {
   namespace = "com.past9.phoneaos"
-  compileSdk = 36
+  compileSdk {
+    version = release(37) {
+      minorApiLevel = 0
+    }
+  }
 
   defaultConfig {
     applicationId = "com.past9.phoneaos"
